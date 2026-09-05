@@ -1,0 +1,6 @@
+#!/data/data/com.termux/files/usr/bin/bash
+echo "🧹 Clearing system buffers and package caches..."
+sync 2>/dev/null
+apt-get clean 2>/dev/null
+rm -rf /tmp/* 2>/dev/null
+echo "✅ Done! System caches cleared safely without interrupting servers."
