@@ -9,11 +9,13 @@ mkdir -p ~/.termux "$TERMUX_HOME/.termux" $PREFIX/bin
 
 cp -f termux.properties ~/.termux/termux.properties
 cp -f termux.properties "$TERMUX_HOME/.termux/termux.properties"
+[ -f font.ttf ] && cp -f font.ttf ~/.termux/font.ttf && cp -f font.ttf "$TERMUX_HOME/.termux/font.ttf"
+[ -f colors.properties ] && cp -f colors.properties ~/.termux/colors.properties && cp -f colors.properties "$TERMUX_HOME/.termux/colors.properties"
 cp -f inputrc ~/.inputrc
 cp -f inputrc "$TERMUX_HOME/.inputrc"
 cp -f sys-clean $PREFIX/bin/sys-clean
 chmod +x $PREFIX/bin/sys-clean
-chmod 644 ~/.termux/termux.properties "$TERMUX_HOME/.termux/termux.properties" ~/.inputrc "$TERMUX_HOME/.inputrc" 2>/dev/null || true
+chmod 644 ~/.termux/* "$TERMUX_HOME/.termux/"* ~/.inputrc "$TERMUX_HOME/.inputrc" 2>/dev/null || true
 
 termux-reload-settings 2>/dev/null || true
 
