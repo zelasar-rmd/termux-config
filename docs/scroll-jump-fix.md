@@ -6,86 +6,61 @@ getting "dragged" back down to the newest lines.
 
 ## Why it happens
 
-This is Termux behavior, not a bug in any single CLI:
-
 - A terminal shows the cursor's position. When a program writes new output, the
   emulator scrolls to keep the newest line visible — it auto-pins the viewport to
   the bottom.
-- TUIs that redraw the whole screen on a timer (progress spinners, status lines,
-  live streaming) repaint continuously. Every repaint while you are scrolled up
-  snaps the viewport back to the bottom.
-- Why it seems app-specific: a CLI that prints lines *incrementally* (like
-  Antigravity CLI running in a proot container) repaints far less often, so the
-  yank happens less. Apps with an animated status line repaint every few hundred
-  milliseconds and are the worst offenders.
+- TUIs that redraw on a timer (status lines, streaming) repaint continuously, so
+  every repaint while you are scrolled up snaps the viewport back down.
+- Exit the TUI and it stops: a shell only writes when it has output, so the TUI
+  was the only thing repainting.
 
-Exit the TUI and the yank stops, because a shell only writes when it has output —
-the TUI was the only thing repainting.
+## The real fix: Termux's native `SCROLL` lock (0.119.0+)
 
-### The flicker is the same story
-
-Modern TUIs also wrap every frame in DECSET 2026 *synchronized output* brackets
-(`ESC[?2026h` … `ESC[?2026l`) so the terminal can paint each frame atomically.
-Termux does not implement mode 2026 — it answers the probe `ESC[?2026$p` with
-`ESC[?2026;0$y` ("mode not recognized") — so the brackets are dropped and each
-erase→redraw is painted in pieces. That is the visible flicker while output
-streams.
-
-## The real fix: a scroll-lock via tmux copy-mode
-
-Termux has no setting to lock the scroll position (long-standing feature request:
-termux/termux-app#2535). tmux provides the lock instead:
-
-- Run the TUI inside tmux, then press **`Ctrl-b [`** to enter copy-mode — or just
-  scroll your finger/scroll-wheel, when `mouse on` is set.
-- Copy-mode shows a frozen snapshot of the scrollback. New output keeps
-  accumulating in history, but it **cannot drag the view down**, and the region
-  you are reading stops repainting. Leave with **`q`**.
-
-This repo ships `tmux.conf` (installed to `~/.tmux.conf`) with the settings that
-make it work:
-
-```tmux
-set -g mouse on             # wheel / touch scroll enters copy-mode and holds
-set -g history-limit 50000  # long transcript to read back through
-set -g mode-keys vi
-```
-
-## The partial mitigation (no tmux)
-
-If you do not want a multiplexer, make the viewport travel further per swipe and
-keep more history, so a short flick gets you far enough up to read between
-repaints. Add to `~/.termux/termux.properties`:
+Termux added a per-session auto-scroll toggle in **0.119.0** (commit `5fc2b4c`,
+closes termux/termux-app#2535). Add the **`SCROLL`** key (shown as **`⇳`**) to the
+extra-keys row and tap it to lock the viewport — new output keeps flowing into
+scrollback without dragging you down. Tap again to resume auto-follow.
 
 ```properties
-touch-scroll-multiplier = 4
-terminal-transcript-rows = 50000
+extra-keys = [ \
+  ['SCROLL', 'ESC', 'HOME', 'END', 'PGUP', 'PGDN', '/', '-', '_', '='] \
+]
 ```
 
-- `touch-scroll-multiplier` — how many screen rows one unit of finger movement
-  scrolls (default `1.0`). Raise it (e.g. `4`) so one swipe covers several pages.
-- `terminal-transcript-rows` — scrollback size, max `50000` (default `2000`), so
-  there is a long history to read at all.
+**Version note:** this key only exists on Termux **0.119.0+**. The current
+F-Droid stable (0.118.3) has **no scroll lock at all** — that is why the drag
+feels unfixable there. Do **not** add `'SCROLL'` on 0.118.x: the key is unknown
+there and gets sent to the terminal as the literal text `SCROLL`.
 
-Apply with:
+## Fallbacks if you are still on 0.118.x
 
-```sh
-termux-reload-settings    # quick settings reload
-# or force-stop Termux from Android settings for a full restart
-```
+### tmux copy-mode (a manual lock)
 
-## If you still need to read output at leisure
+Run the TUI inside tmux and press **`Ctrl-b [`** to enter copy-mode: the view
+freezes and new output cannot pull it down (`q` to leave). Enabled by
+`tmux.conf` in this repo. Note that touch-scroll may scroll Termux's own
+scrollback rather than entering copy-mode, so the `Ctrl-b [` key is the reliable
+trigger.
 
-When you want a truly frozen screen, get the output out of the live TUI:
+### Pager / export (most reliable)
 
-- Pipe through a pager: `<cmd> -p "..." | less -R`
-- Export the session and read the file: run `/export` (or `/session-file` to find
-  the transcript path) and open it in `less`.
-- Run a one-shot, non-interactive mode if the CLI has one (e.g. `-p`/`--print`),
-  which prints and exits with no repainting.
+Get the text out of the live TUI so nothing repaints:
+
+- Export the session and read the file: `/export` (or `/session-file` for the
+  transcript path) and open it in `less -R`.
+- Run a one-shot, non-interactive mode (`cmd -p "…" > out.txt`) and read `out.txt`
+  with `less -R`.
+
+## The flicker is a separate, related issue
+
+Modern TUIs wrap every frame in DECSET 2026 *synchronized output* brackets
+(`ESC[?2026h` … `ESC[?2026l`) so the terminal can paint each frame atomically.
+Termux answers the probe `ESC[?2026$p` with `ESC[?2026;0$y` ("mode not
+recognized"), so the brackets are dropped and each erase→redraw is painted in
+pieces. Locking scroll (above) does not stop the repaint, but it does let you sit
+on stable history and read without the frame changing under you.
 
 ## Notes for other tools
 
 This applies to any Termux-hosted TUI (Claude Code, Cursor CLI, Gemini CLI,
-Antigravity, etc.) — nothing here is Command-Code-specific. The properties and
-tmux settings are global.
+Antigravity, etc.) — nothing here is Command-Code-specific.
