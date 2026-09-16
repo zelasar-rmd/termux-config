@@ -13,10 +13,12 @@ cp -f termux.properties "$TERMUX_HOME/.termux/termux.properties"
 [ -f colors.properties ] && cp -f colors.properties ~/.termux/colors.properties && cp -f colors.properties "$TERMUX_HOME/.termux/colors.properties"
 cp -f inputrc ~/.inputrc
 cp -f inputrc "$TERMUX_HOME/.inputrc"
+[ -f tmux.conf ] && cp -f tmux.conf ~/.tmux.conf && cp -f tmux.conf "$TERMUX_HOME/.tmux.conf"
 cp -f sys-clean $PREFIX/bin/sys-clean
 chmod +x $PREFIX/bin/sys-clean
-chmod 644 ~/.termux/* "$TERMUX_HOME/.termux/"* ~/.inputrc "$TERMUX_HOME/.inputrc" 2>/dev/null || true
+chmod 644 ~/.termux/* "$TERMUX_HOME/.termux/"* ~/.inputrc "$TERMUX_HOME/.inputrc" ~/.tmux.conf "$TERMUX_HOME/.tmux.conf" 2>/dev/null || true
 
 termux-reload-settings 2>/dev/null || true
+tmux source-file ~/.tmux.conf 2>/dev/null || true
 
 echo "🎉 Done! Your Termux setup has been restored."
