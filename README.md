@@ -10,6 +10,7 @@ Personal Termux setup featuring a 3-layer touch key bar, resource clearance util
 
 ## Troubleshooting
 - [Screen jumps to the bottom / flickers while reading in a live TUI](docs/scroll-jump-fix.md) — why it happens and how to stop it.
+- [Runbook: migrate Termux to 0.119.0 for the native scroll lock](docs/upgrade-termux-0.119.md) — backup, source switch, and restore.
 
 ## Quick 1-Line Installation on New Device
 ```bash
